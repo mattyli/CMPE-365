@@ -64,6 +64,7 @@ class Point(object):
 
       self.highlight = False # to cause drawing to highlight this point
 
+
     def __repr__(self):
       return 'pt(%g,%g)' % (self.x, self.y)
 
@@ -71,30 +72,31 @@ class Point(object):
 
       # Highlight with yellow fill
       
-      if self.highlight:
-          glColor3f( 0.9, 0.9, 0.4 )
-          glBegin( GL_POLYGON )
-          for theta in thetas:
-              glVertex2f( self.x+r*math.cos(theta), self.y+r*math.sin(theta) )
-          glEnd()
+        if self.highlight:
+            glColor3f( 0.9, 0.9, 0.4 )
+            glBegin( GL_POLYGON )
+            for theta in thetas:
+                glVertex2f( self.x+r*math.cos(theta), self.y+r*math.sin(theta) )
+            glEnd()
+    
 
       # Outline the point
       
-      glColor3f( 0, 0, 0 )
-      glBegin( GL_LINE_LOOP )
-      for theta in thetas:
-          glVertex2f( self.x+r*math.cos(theta), self.y+r*math.sin(theta) )
-      glEnd()
+        glColor3f( 0, 0, 0 )
+        glBegin( GL_LINE_LOOP )
+        for theta in thetas:
+            glVertex2f( self.x+r*math.cos(theta), self.y+r*math.sin(theta) )
+        glEnd()
 
       # Draw edges to next CCW and CW points.
 
-      if self.ccwPoint:
-        glColor3f( 0, 0, 1 )
-        drawArrow( self.x, self.y, self.ccwPoint.x, self.ccwPoint.y )
+        if self.ccwPoint:
+            glColor3f( 0, 0, 1 )
+            drawArrow( self.x, self.y, self.ccwPoint.x, self.ccwPoint.y )
 
-      if self.cwPoint:
-        glColor3f( 1, 0, 0 )
-        drawArrow( self.x, self.y, self.cwPoint.x, self.cwPoint.y )
+        if self.cwPoint:
+            glColor3f( 1, 0, 0 )
+            drawArrow( self.x, self.y, self.cwPoint.x, self.cwPoint.y )
 
 # Draw an arrow between two points, offset a bit to the right
 
@@ -137,7 +139,7 @@ LEFT_TURN  = 1
 RIGHT_TURN = 2
 COLLINEAR  = 3
 
-def turn( a, b, c ):            # a, b, c --> points
+def turn(a: Point, b: Point, c: Point)->int:            # a, b, c --> points
 
     det = (a.x-c.x) * (b.y-c.y) - (b.x-c.x) * (a.y-c.y)             # det = determinant
 
@@ -156,17 +158,18 @@ def turn( a, b, c ):            # a, b, c --> points
 def buildHull(points: list[Point]):               # points is a list of points
     n = len(points)
     out = []
-    # BASE CASE (n <= 3), this would be the end of recursion
+    # BASE CASE (n <= 3), this would be the end of recursion, we have less than 3 points
     if n <= 3:
-        #out = []
-        print("BASE CASE REACHED CONSTRUCTING MINIMUM HULL")
-        for idx in range(n):            # accessing elements by index num so i can do modular arithmetic
-            print("DRAWING ARROWS")
-            points[idx].cwPoint  = points[(idx+1) % n]        # need the modulo to bring back value within array range
-            points[idx].ccwPoint = points[(idx+n-1) % n]        # these expressions only hold true for len(points) <= 3
-            out.append(points[idx])
+        #print("BASE CASE REACHED CONSTRUCTING MINIMUM HULL")
 
-        return out                                       # return to the calling statement (this is recursion)
+        for idx in range(n):            # accessing elements by index num so i can do modular arithmetic
+            points[idx].cwPoint  = points[(idx+1) % n]          # need the modulo to bring back value within array range
+            points[idx].ccwPoint = points[(idx+n-1) % n]        # these expressions only hold true for len(points) <= 3
+
+            print("THE CW POINT of " + repr(points[idx]) + repr(points[idx].cwPoint) + "\n")
+            print("THE CCW POINT of " + repr(points[idx]) + repr(points[idx].ccwPoint) + "\n")
+        return                                       # return to the calling statement (this is recursion)
+        
             
     else:
         # partition the input into two sets, those above and below the median
@@ -177,13 +180,13 @@ def buildHull(points: list[Point]):               # points is a list of points
         print("LEFT HULL" +str(left) + "\n")
         
         right = points[middex:]
-        newLeft = buildHull(left)                 # input arrays should be modified (Point class is mutable)
-        for p in newLeft:
-            print(p.ccwPoint)
-        # buildHull(right)   
-
-        # print("LEFT AFT" +str(left) + "\n")
-        # mergeHulls(left, right)
+        buildHull(left)                 # input arrays should be modified (Point class is mutable)
+        print("BUILDING RIGHT HULL\n")
+        buildHull(right)
+        display(True)
+        print("NOW MERGE HULLS\n")
+        mergeHulls(left, right)
+    
 
 
     """
@@ -193,20 +196,47 @@ def buildHull(points: list[Point]):               # points is a list of points
     """
 
 def mergeHulls(leftHull: list[Point], rightHull: list[Point])->None:
-    walkAndJoin(leftHull[len(leftHull)-1], rightHull[0])
+    print("WALKUP LEFT: " + repr(leftHull[len(leftHull)-1]))
+    walkUpAndJoin(leftHull[len(leftHull)-1], rightHull[0])              # rightmost point of the left hull and leftmost point of the right hull
+    display(True)
+
+    print("WALKDOWN LEFT: " + repr(leftHull[len(leftHull)-1]))          # these might not be the same, even though they should be
+    walkDownAndJoin(leftHull[len(leftHull)-1], rightHull[0])
+    display(True)
     return
 
 
-def walkAndJoin(left: Point, right: Point)->None: # ret the topmost value of each HULL respectively
-    # look at pseudocode from the slide
+def walkUpAndJoin(left: Point, right: Point)->list[Point]: # ret the topmost value of each HULL respectively
+    # FIRST WHILE LOOP IS WALK UP
     while turn(left.ccwPoint, left, right) == LEFT_TURN or turn(left, right, right.cwPoint) == LEFT_TURN:
         if turn(left.ccwPoint, left, right) == LEFT_TURN:
             left = left.ccwPoint
         else:
             right = right.cwPoint
 
-    # join left and right (DOES THIS ALREADY JOIN LEFT AND RIGHT?)
+    tL = left
+    tR = right
 
+    tL.cwPoint = tR
+    tR.ccwPoint = tL
+    print("LEFT CCW = " +repr(left.ccwPoint) + ", RIGHT CW = " + repr(right.cwPoint))
+    return
+
+def walkDownAndJoin(left: Point, right: Point)->None:
+    print("WALKING DOWN\n")
+    # WALKING DOWN 
+    while turn(left.cwPoint, left, right) == RIGHT_TURN or turn(left, right, right.ccwPoint) == RIGHT_TURN:
+        
+        if turn(left.cwPoint, left, right) == RIGHT_TURN:
+            left = left.cwPoint
+        else:
+            right = right.ccwPoint
+    
+    tL = left
+    tR = right
+
+    tL.ccwPoint = tR
+    tR.cwPoint = tL
     return
     
 

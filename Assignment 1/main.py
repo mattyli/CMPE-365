@@ -166,8 +166,8 @@ def buildHull(points: list[Point]):               # points is a list of points
             points[idx].cwPoint  = points[(idx+1) % n]          # need the modulo to bring back value within array range
             points[idx].ccwPoint = points[(idx+n-1) % n]        # these expressions only hold true for len(points) <= 3
 
-            print("THE CW POINT of " + repr(points[idx]) + repr(points[idx].cwPoint) + "\n")
-            print("THE CCW POINT of " + repr(points[idx]) + repr(points[idx].ccwPoint) + "\n")
+            # print("THE CW POINT of " + repr(points[idx]) + repr(points[idx].cwPoint) + "\n")
+            # print("THE CCW POINT of " + repr(points[idx]) + repr(points[idx].ccwPoint) + "\n")
         return                                       # return to the calling statement (this is recursion)
         
             
@@ -181,12 +181,14 @@ def buildHull(points: list[Point]):               # points is a list of points
         
         right = points[middex:]
         buildHull(left)                 # input arrays should be modified (Point class is mutable)
+        display(True)
         print("BUILDING RIGHT HULL\n")
         buildHull(right)
         display(True)
         print("NOW MERGE HULLS\n")
         mergeHulls(left, right)
-    
+        display(True)
+
 
 
     """
@@ -194,14 +196,47 @@ def buildHull(points: list[Point]):               # points is a list of points
         This function (given two points), should walk and join the vertically
         extreme points on each convex hull
     """
+def merge(leftHull: list[Point], rightHull: list[Point])->None:
+    LUP = max(leftHull, key = lambda x: x.x)
+    RUP = min(rightHull, key = lambda x: x.x)
+
+    LD = LUP
+    RD = RUP
+
+    while turn(LUP.ccwPoint, LUP, RUP) == LEFT_TURN or turn(LUP, RUP, RUP.cwPoint) == LEFT_TURN:
+        if turn(LUP.ccwPoint, LUP, RUP) == LEFT_TURN:
+            LUP = LUP.ccwPoint
+        else:
+            RUP = RUP.cwPoint
+    
+    while turn(LD.ccwPoint, LD, RD) == RIGHT_TURN or turn(LD, RD, RD.cwPoint) == RIGHT_TURN:
+        if turn(LD.ccwPoint, LD, RD) == RIGHT_TURN:
+            LD = LD.cwPoint
+        else:
+            RD = RD.ccwPoint
+    
+    LUP.cwPoint = RUP
+    RUP.ccwPoint = LUP
+    LD.ccwPoint = RD
+    RD.cwPoint = LD
+    return
+    
 
 def mergeHulls(leftHull: list[Point], rightHull: list[Point])->None:
-    print("WALKUP LEFT: " + repr(leftHull[len(leftHull)-1]))
-    walkUpAndJoin(leftHull[len(leftHull)-1], rightHull[0])              # rightmost point of the left hull and leftmost point of the right hull
+    left = max(leftHull, key = lambda x: x.x)
+    right = min(rightHull, key = lambda x: x.x)
+    
+    leftDown = left
+    rightDown = right
+    # print("WALKUP LEFT: " + repr(left))
+    # print("LEFT CURRENT CW: " + repr(left.cwPoint))
+    walkUpAndJoin(left, right)              # rightmost point of the left hull and leftmost point of the right hull
     display(True)
 
-    print("WALKDOWN LEFT: " + repr(leftHull[len(leftHull)-1]))          # these might not be the same, even though they should be
-    walkDownAndJoin(leftHull[len(leftHull)-1], rightHull[0])
+    # print("WALKDOWN LEFT: " + repr(left))          # these might not be the same, even though they should be
+    # print("LEFT CURRENT CW: " + repr(left.cwPoint))
+    # print("RIGHT = " + repr(right))
+    walkDownAndJoin(leftDown, rightDown)
     display(True)
     return
 
@@ -214,29 +249,31 @@ def walkUpAndJoin(left: Point, right: Point)->list[Point]: # ret the topmost val
         else:
             right = right.cwPoint
 
-    tL = left
-    tR = right
-
-    tL.cwPoint = tR
-    tR.ccwPoint = tL
-    print("LEFT CCW = " +repr(left.ccwPoint) + ", RIGHT CW = " + repr(right.cwPoint))
+    left.cwPoint = right
+    right.ccwPoint = left
+    #print("LEFT CCW = " +repr(left.ccwPoint) + ", RIGHT CW = " + repr(right.cwPoint))
     return
 
 def walkDownAndJoin(left: Point, right: Point)->None:
-    print("WALKING DOWN\n")
+    #print("WALKING DOWN\n")
     # WALKING DOWN 
-    while turn(left.cwPoint, left, right) == RIGHT_TURN or turn(left, right, right.ccwPoint) == RIGHT_TURN:
-        
-        if turn(left.cwPoint, left, right) == RIGHT_TURN:
+
+    # turn(right, left, left ccw) or turn(left, right, rightcw)
+    while turn(right, left, left.ccwPoint) == LEFT_TURN or turn(left, right, right.cwPoint) == RIGHT_TURN:
+        if turn(right, left, left.ccwPoint) == LEFT_TURN:
+            left = left.ccwPoint
+        else:
+            right = right.cwPoint
+    
+    while turn(left.ccwPoint, left, right) == RIGHT_TURN or turn(left, right, right.cwPoint) == RIGHT_TURN:
+        if turn(left.ccwPoint, left, right) == RIGHT_TURN:
             left = left.cwPoint
         else:
             right = right.ccwPoint
     
-    tL = left
-    tR = right
-
-    tL.ccwPoint = tR
-    tR.cwPoint = tL
+    right.highlight = left.highlight = True
+    right.cwPoint = left
+    left.ccwPoint = right
     return
     
 

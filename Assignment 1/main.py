@@ -22,6 +22,8 @@ except:
 
 # Globals
 
+garbagePoints = set()
+
 window = None
 
 windowWidth  = 800 # window dimensions
@@ -157,7 +159,6 @@ def turn(a: Point, b: Point, c: Point)->int:            # a, b, c --> points
 
 def buildHull(points: list[Point]):               # points is a list of points
     n = len(points)
-    out = []
     # BASE CASE (n <= 3), this would be the end of recursion, we have less than 3 points
     if n <= 3:
         #print("BASE CASE REACHED CONSTRUCTING MINIMUM HULL")
@@ -180,14 +181,15 @@ def buildHull(points: list[Point]):               # points is a list of points
         print("LEFT HULL" +str(left) + "\n")
         
         right = points[middex:]
-        buildHull(left)                 # input arrays should be modified (Point class is mutable)
+        buildHull(right)                 # input arrays should be modified (Point class is mutable)
         display(True)
         print("BUILDING RIGHT HULL\n")
-        buildHull(right)
+        buildHull(left)
         display(True)
         print("NOW MERGE HULLS\n")
         mergeHulls(left, right)
         display(True)
+    
 
 
 
@@ -245,8 +247,12 @@ def walkUpAndJoin(left: Point, right: Point)->list[Point]: # ret the topmost val
     # FIRST WHILE LOOP IS WALK UP
     while turn(left.ccwPoint, left, right) == LEFT_TURN or turn(left, right, right.cwPoint) == LEFT_TURN:
         if turn(left.ccwPoint, left, right) == LEFT_TURN:
+            if left not in garbagePoints:
+                garbagePoints.add(left)
             left = left.ccwPoint
         else:
+            if right not in garbagePoints:
+                garbagePoints.add(right)
             right = right.cwPoint
 
     left.cwPoint = right
@@ -258,20 +264,25 @@ def walkDownAndJoin(left: Point, right: Point)->None:
     #print("WALKING DOWN\n")
     # WALKING DOWN 
 
-    # turn(right, left, left ccw) or turn(left, right, rightcw)
-    while turn(right, left, left.ccwPoint) == LEFT_TURN or turn(left, right, right.cwPoint) == RIGHT_TURN:
-        if turn(right, left, left.ccwPoint) == LEFT_TURN:
+    # ORIGINAL : 
+    while turn(left.ccwPoint, left, right) == RIGHT_TURN or turn(left, right, right.cwPoint) == RIGHT_TURN:
+        right.highlight = True
+        if turn(left.ccwPoint, left, right) == RIGHT_TURN:
+            if left not in garbagePoints:
+                garbagePoints.add(left)
             left = left.ccwPoint
         else:
+            right.highlight = False
+            if right not in garbagePoints:
+                garbagePoints.add(right)
             right = right.cwPoint
     
-    while turn(left.ccwPoint, left, right) == RIGHT_TURN or turn(left, right, right.cwPoint) == RIGHT_TURN:
-        if turn(left.ccwPoint, left, right) == RIGHT_TURN:
-            left = left.cwPoint
-        else:
-            right = right.ccwPoint
+    # while turn(left.ccwPoint, left, right) == RIGHT_TURN or turn(left, right, right.cwPoint) == RIGHT_TURN:
+    #     if turn(left.ccwPoint, left, right) == RIGHT_TURN:
+    #         left = left.cwPoint
+    #     else:
+    #         right = right.ccwPoint
     
-    right.highlight = left.highlight = True
     right.cwPoint = left
     left.ccwPoint = right
     return
